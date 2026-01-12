@@ -20,7 +20,7 @@ const Sidebar = ({username,selectedUser}) => {
       </AppBar>
 
    <Typography p={1} variant="subtitle2">
-        Chats zsfsfasf xfsxfsd
+        Chats zsfsfasf xfsxfsd fsafasdf
       </Typography>
           <Divider />
        <List>
