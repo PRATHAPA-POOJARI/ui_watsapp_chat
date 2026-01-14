@@ -21,7 +21,7 @@ const Login = ({ setUsername }) => {
     >
       <Paper sx={{ p: 4, width: 350, textAlign: "center" }} elevation={3}>
         <Typography variant="h6" gutterBottom>
-          WhatsApp Messenger11
+          WhatsApp Messenger
         </Typography>
 
         <TextField
