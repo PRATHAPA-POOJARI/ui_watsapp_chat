@@ -11,6 +11,7 @@ import {
   ListItemText,
 } from "@mui/material";
 
+
 const Sidebar = ({ username, selectedUser, setSelectedUser }) => {
   const dummyUsers = ["Rahul", "Sneha", "Amit", "Priya", "John"];
 
