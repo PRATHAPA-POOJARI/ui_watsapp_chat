@@ -6,7 +6,7 @@ import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
 import { useSelector, useDispatch } from 'react-redux';
 import { useEffect } from 'react';
-import { loginSuccess } from './Redux/slices/authSlice';
+import { loginUser  } from './Redux/slices/authSlice';
 
 const socket = io("http://localhost:5000");
 
@@ -18,7 +18,7 @@ const App = () => {
     const storedUser = localStorage.getItem("user");
 
     if (storedUser) {
-      dispatch(loginSuccess(JSON.parse(storedUser)));
+      dispatch(loginUser(JSON.parse(storedUser)));
     }
   }, [dispatch]);
 
