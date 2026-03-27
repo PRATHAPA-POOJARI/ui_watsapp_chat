@@ -1,61 +1,39 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
+import { verifyOtp } from "./otpSlice";
 
-// ✅ Async Thunk (after OTP verified)
-export const loginUser = createAsyncThunk(
-  "auth/loginUser",
-  async (userData, { rejectWithValue }) => {
-    try {
-      return userData; // OTP already verified
-    } catch (err) {
-      return rejectWithValue("Login failed");
-    }
-  }
-);
+// Load persisted state from localStorage
+const savedUser = localStorage.getItem("user");
+const savedToken = localStorage.getItem("token");
 
 const authSlice = createSlice({
   name: "auth",
   initialState: {
-    user: null,
-    loading: false,
-    isAuthenticated: false,
-    error: null,
+    user: savedUser ? JSON.parse(savedUser) : null,
+    token: savedToken || null,
+    isAuthenticated: !!savedToken,
   },
-
   reducers: {
-    // ✅ For restoring login from localStorage
-    loginSuccess: (state, action) => {
+    loginUser: (state, action) => {
       state.user = action.payload;
       state.isAuthenticated = true;
     },
-
-    logout: (state) => {
+    logoutUser: (state) => {
       state.user = null;
+      state.token = null;
       state.isAuthenticated = false;
-      state.error = null;
-      state.loading = false;
-
       localStorage.removeItem("token");
       localStorage.removeItem("user");
     },
   },
-
+  // Auto-login when verifyOtp succeeds
   extraReducers: (builder) => {
-    builder
-      .addCase(loginUser.pending, (state) => {
-        state.loading = true;
-      })
-      .addCase(loginUser.fulfilled, (state, action) => {
-        state.loading = false;
-        state.user = action.payload;
-        state.isAuthenticated = true;
-      })
-      .addCase(loginUser.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      });
+    builder.addCase(verifyOtp.fulfilled, (state, action) => {
+      state.token = action.payload.token;
+      state.user = action.payload.user;
+      state.isAuthenticated = true;
+    });
   },
 });
 
-export const { logout, loginSuccess } = authSlice.actions;
+export const { loginUser, logoutUser } = authSlice.actions;
 export default authSlice.reducer;
-
