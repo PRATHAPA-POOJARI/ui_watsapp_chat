@@ -8,7 +8,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useEffect } from 'react';
 import { loginUser  } from './Redux/slices/authSlice';
 
-const socket = io("http://localhost:5000");
+const socket = io("http://192.168.1.4:5000");
 
 const App = () => {
   const dispatch = useDispatch();   // ✅ FIXED
