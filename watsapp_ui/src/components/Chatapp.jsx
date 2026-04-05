@@ -30,7 +30,7 @@ const ChatApp = ({ username }) => {
     if (!token) return;
     const fetchUsers = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/chat/search?query=", {
+        const res = await fetch("http://192.168.1.4:5000/api/chat/search?query=", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -99,7 +99,7 @@ const ChatApp = ({ username }) => {
 
     try {
       // Get or create the chat between the two users
-      const chatRes = await fetch("http://localhost:5000/api/chat", {
+      const chatRes = await fetch("http://192.168.1.4:5000api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -116,7 +116,7 @@ const ChatApp = ({ username }) => {
 
       // Load message history from DB
       const msgRes = await fetch(
-        `http://localhost:5000/api/chat/message/${chatId}`,
+        `http://192.168.1.4:5000/api/chat/message/${chatId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const history = await msgRes.json();
@@ -142,7 +142,7 @@ const ChatApp = ({ username }) => {
 
     try {
       // Save to MongoDB
-      const res = await fetch("http://localhost:5000/api/chat/message", {
+      const res = await fetch("http://192.168.1.4:5000/api/chat/message", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
