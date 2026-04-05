@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
-const API_BASE = "http://localhost:5000/api/auth";
+const API_BASE = "http://192.168.1.4:5000/api/auth";
 
 ;
 
