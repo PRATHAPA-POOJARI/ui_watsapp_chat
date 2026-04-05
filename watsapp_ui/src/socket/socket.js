@@ -7,7 +7,7 @@ export const getSocket = () => socket;
 export const initSocket = (token) => {
   if (socket) return socket; // already connected
 
-  socket = io("http://localhost:5000", {
+  socket = io("http://192.168.1.4:5000", {
     auth: { token },
     transports: ["websocket"],
   });
