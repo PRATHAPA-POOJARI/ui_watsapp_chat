@@ -6,7 +6,7 @@ import { logout as otpLogout } from "../Redux/slices/otpSlice";
 import { initSocket, disconnectSocket } from "../socket/socket";
 import Sidebar from "./Sidebar";
 import ChatWindow from "./ChatWindow";
-
+import { API_SEARCH_USERS, API_CREATE_CHAT, API_GET_MESSAGES, API_SEND_MESSAGE } from "../config";
 const ChatApp = ({ username }) => {
   const dispatch = useDispatch();
   const { token, user } = useSelector((s) => s.auth);
@@ -30,12 +30,14 @@ const ChatApp = ({ username }) => {
     if (!token) return;
     const fetchUsers = async () => {
       try {
-        const res = await fetch("http://192.168.1.4:5000/api/chat/search?query=", {
+       const res = await fetch(`${API_SEARCH_USERS}?query=`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
         if (Array.isArray(data)) {
-          setContacts(data.map((u) => ({
+          // Filter out current user from contacts list
+          const otherUsers = data.filter((u) => u._id !== user?.id);
+          setContacts(otherUsers.map((u) => ({
             id: u._id,
             name: u.username,
             email: u.email,
@@ -50,7 +52,7 @@ const ChatApp = ({ username }) => {
       }
     };
     fetchUsers();
-  }, [token]);
+  }, [token, user?.id]);
 
   // 3. Track online/offline status
   useEffect(() => {
@@ -99,7 +101,8 @@ const ChatApp = ({ username }) => {
 
     try {
       // Get or create the chat between the two users
-      const chatRes = await fetch("http://192.168.1.4:5000api/chat", {
+      // FIXED: Added missing colon after 5000
+     const chatRes = await fetch(API_CREATE_CHAT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -115,17 +118,17 @@ const ChatApp = ({ username }) => {
       socket?.emit("join_chat", chatId);
 
       // Load message history from DB
-      const msgRes = await fetch(
-        `http://192.168.1.4:5000/api/chat/message/${chatId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // FIXED: Added missing colon after 5000
+
+      const msgRes = await fetch(API_GET_MESSAGES(chatId), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const history = await msgRes.json();
       if (Array.isArray(history)) setMessages(history);
     } catch (err) {
       console.error("Failed to open chat:", err);
     }
   };
-
   // 6. Send a message
   const handleSendMessage = async (content) => {
     if (!content.trim() || !activeChatId) return;
@@ -135,14 +138,15 @@ const ChatApp = ({ username }) => {
       _id: `temp_${Date.now()}`,
       chatId: activeChatId,
       content,
-      sender: { _id: user.id, username: user.username },
+      sender: { _id: user?.id, username: user?.username },
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, tempMsg]);
 
     try {
       // Save to MongoDB
-      const res = await fetch("http://192.168.1.4:5000/api/chat/message", {
+      // FIXED: Added missing colon after 5000
+      const res = await fetch(API_SEND_MESSAGE, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
