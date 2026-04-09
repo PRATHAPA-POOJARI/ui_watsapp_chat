@@ -1,8 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
-const API_BASE = "http://192.168.1.4:5000/api/auth";
+import { API_SEND_OTP, API_VERIFY_OTP } from "../../config";
 
-;
 
 // ===================== ASYNC THUNKS =====================
 
@@ -11,7 +10,7 @@ export const sendOtp = createAsyncThunk(
   "otp/sendOtp",
   async ({ email, username }, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${API_BASE}/send-otp`, {
+    const response = await fetch(API_SEND_OTP, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, username }),
@@ -35,7 +34,7 @@ export const verifyOtp = createAsyncThunk(
   "otp/verifyOtp",
   async ({ email, otp }, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${API_BASE}/verify-otp`, {
+      const response = await fetch(API_VERIFY_OTP, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp }),
