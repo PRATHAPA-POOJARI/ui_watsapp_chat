@@ -1,5 +1,5 @@
 import { io } from "socket.io-client";
-
+import { SOCKET_URL } from "../config";
 let socket = null;
 
 export const getSocket = () => socket;
@@ -7,7 +7,7 @@ export const getSocket = () => socket;
 export const initSocket = (token) => {
   if (socket) return socket; // already connected
 
-  socket = io("http://192.168.1.4:5000", {
+  socket = io(SOCKET_URL, {
     auth: { token },
     transports: ["websocket"],
   });
