@@ -130,13 +130,16 @@ const Login = () => {
   };
 
   const handleVerifyOtp = async () => {
-    const code = otp.join("");
-    if (code.length < 6) return;
-    const result = await dispatch(verifyOtp({ email, otp: code }));
-    if (verifyOtp.fulfilled.match(result)) {
-      dispatch(loginUser({ username: formUsername.trim(), email }));
-    }
-  };
+  const code = otp.join("");
+  if (code.length < 6) return;
+  
+  const result = await dispatch(verifyOtp({ email, otp: code }));
+  
+  // ✅ Just log success - don't dispatch loginUser again
+  if (verifyOtp.fulfilled.match(result)) {
+    console.log("✅ Login successful!");
+  }
+};
 
   const handleBack = () => {
     dispatch(otpLogout());
