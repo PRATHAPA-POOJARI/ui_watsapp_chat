@@ -3,7 +3,7 @@ import { Box } from "@mui/material";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../Redux/slices/authSlice";
 import { logout as otpLogout } from "../Redux/slices/otpSlice";
-import { initSocket, disconnectSocket } from "../socket/socket";
+import { initSocket, disconnectSocket } from "../socket/Socket";
 import Sidebar from "./Sidebar";
 import ChatWindow from "./ChatWindow";
 import { API_SEARCH_USERS, API_CREATE_CHAT, API_GET_MESSAGES, API_SEND_MESSAGE } from "../config";
@@ -18,41 +18,69 @@ const ChatApp = ({ username }) => {
   const [messages, setMessages]               = useState([]);
 
   // 1. Init socket
-  useEffect(() => {
-    if (!token) return;
-    const s = initSocket(token);
-    setSocket(s);
-    return () => disconnectSocket();
-  }, [token]);
+ // In ChatApp.jsx - Update the socket initialization useEffect
+useEffect(() => {
+  if (!token) return;
+  
+  console.log("🔌 Initializing socket with token:", token);
+  const s = initSocket(token);
+  setSocket(s);
+  
+  // ✅ Don't disconnect immediately - keep connection alive
+  return () => {
+    console.log("🔌 Cleaning up socket on component unmount");
+    disconnectSocket();
+  };
+}, [token]);
 
   // 2. Load all users into sidebar
-  useEffect(() => {
-    if (!token) return;
-    const fetchUsers = async () => {
-      try {
-       const res = await fetch(`${API_SEARCH_USERS}?query=`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          // Filter out current user from contacts list
-          const otherUsers = data.filter((u) => u._id !== user?.id);
-          setContacts(otherUsers.map((u) => ({
-            id: u._id,
-            name: u.username,
-            email: u.email,
-            preview: "Tap to chat",
-            time: "",
-            unread: 0,
-            online: false,
-          })));
-        }
-      } catch (err) {
-        console.error("Failed to fetch users:", err);
+useEffect(() => {
+  // ✅ Get token directly from localStorage
+  const authToken = localStorage.getItem("token");
+  
+  console.log("========== DEBUGGING USER LIST ==========");
+  console.log("1. Token from Redux:", token);
+  console.log("2. Token from localStorage:", authToken);
+  
+  if (!authToken) {
+    console.error("❌ No token found in localStorage!");
+    return;
+  }
+  
+  const fetchUsers = async () => {
+    try {
+      console.log("3. API URL:", `${API_SEARCH_USERS}?query=`);
+      
+      const res = await fetch(`${API_SEARCH_USERS}?query=`, {
+        headers: { Authorization: `Bearer ${authToken}` }, // ✅ Use localStorage token
+      });
+
+      console.log("4. Response status:", res.status);
+      
+      const data = await res.json();
+      console.log("5. Data from API:", data); 
+      
+      if (Array.isArray(data)) {
+        const otherUsers = data.filter((u) => u._id !== user?.id);
+        console.log("6. Other users count:", otherUsers.length);
+        
+        setContacts(otherUsers.map((u) => ({
+          id: u._id,
+          name: u.username,
+          email: u.email,
+          preview: "Tap to chat",
+          time: "",
+          unread: 0,
+          online: false,
+        })));
       }
-    };
-    fetchUsers();
-  }, [token, user?.id]);
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+    }
+  };
+  
+  fetchUsers();
+}, [token, user?.id]);
 
   // 3. Track online/offline status
   useEffect(() => {
