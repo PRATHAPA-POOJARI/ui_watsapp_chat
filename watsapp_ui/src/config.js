@@ -1,6 +1,6 @@
 // src/config.js
-export const SOCKET_URL = "http://192.168.1.4:5000";
-export const API_BASE_URL = "http://192.168.1.4:5000/api";
+export const SOCKET_URL = "http://192.168.1.2:5000";
+export const API_BASE_URL = "http://192.168.1.2:5000/api";
 
 export const API_SEND_OTP = `${API_BASE_URL}/auth/send-otp`;
 export const API_VERIFY_OTP = `${API_BASE_URL}/auth/verify-otp`;
