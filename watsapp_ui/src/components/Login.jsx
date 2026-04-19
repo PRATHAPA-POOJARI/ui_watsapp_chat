@@ -4,7 +4,7 @@ import { Box, Paper, Typography, CircularProgress } from "@mui/material";
 import { sendOtp, verifyOtp } from "../Redux/slices/otpSlice";
 import { loginUser } from "../Redux/slices/authSlice";
 import { logout as otpLogout } from "../Redux/slices/otpSlice";
-import ChatApp from "./Chatapp";
+import ChatApp from "./ChatApp";
 
 /* ─── colour tokens ─────────────────────────────────────── */
 const C = {
