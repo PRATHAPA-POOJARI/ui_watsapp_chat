@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Box } from "@mui/material";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../Redux/slices/authSlice";
@@ -6,7 +6,13 @@ import { logout as otpLogout } from "../Redux/slices/otpSlice";
 import { initSocket, disconnectSocket } from "../socket/Socket";
 import Sidebar from "./Sidebar";
 import ChatWindow from "./ChatWindow";
-import { API_SEARCH_USERS, API_CREATE_CHAT, API_GET_MESSAGES, API_SEND_MESSAGE } from "../config";
+import {
+  API_SEARCH_USERS,
+  API_CREATE_CHAT,
+  API_GET_MESSAGES,
+  API_SEND_MESSAGE,
+} from "../config";
+
 const ChatApp = ({ username }) => {
   const dispatch = useDispatch();
   const { token, user } = useSelector((s) => s.auth);
@@ -17,72 +23,78 @@ const ChatApp = ({ username }) => {
   const [activeChatId, setActiveChatId]       = useState(null);
   const [messages, setMessages]               = useState([]);
 
+  // Keep activeChatId accessible inside socket callbacks
+  const activeChatIdRef = useRef(null);
+  useEffect(() => {
+    activeChatIdRef.current = activeChatId;
+  }, [activeChatId]);
+
   // 1. Init socket
- // In ChatApp.jsx - Update the socket initialization useEffect
-useEffect(() => {
-  if (!token) return;
-  
-  console.log("🔌 Initializing socket with token:", token);
-  const s = initSocket(token);
-  setSocket(s);
-  
-  // ✅ Don't disconnect immediately - keep connection alive
-  return () => {
-    console.log("🔌 Cleaning up socket on component unmount");
-    disconnectSocket();
-  };
-}, [token]);
+  useEffect(() => {
+    if (!token) return;
+    const s = initSocket(token);
+    setSocket(s);
+    return () => disconnectSocket();
+  }, [token]);
 
-  // 2. Load all users into sidebar
-useEffect(() => {
-  // ✅ Get token directly from localStorage
-  const authToken = localStorage.getItem("token");
-  
-  console.log("========== DEBUGGING USER LIST ==========");
-  console.log("1. Token from Redux:", token);
-  console.log("2. Token from localStorage:", authToken);
-  
-  if (!authToken) {
-    console.error("❌ No token found in localStorage!");
-    return;
-  }
-  
-  const fetchUsers = async () => {
-    try {
-      console.log("3. API URL:", `${API_SEARCH_USERS}?query=`);
-      
-      const res = await fetch(`${API_SEARCH_USERS}?query=`, {
-        headers: { Authorization: `Bearer ${authToken}` }, // ✅ Use localStorage token
-      });
+  // 2. Load all users
+  useEffect(() => {
+    const authToken = localStorage.getItem("token");
+    if (!authToken) return;
 
-      console.log("4. Response status:", res.status);
-      
-      const data = await res.json();
-      console.log("5. Data from API:", data); 
-      
-      if (Array.isArray(data)) {
-        const otherUsers = data.filter((u) => u._id !== user?.id);
-        console.log("6. Other users count:", otherUsers.length);
-        
-        setContacts(otherUsers.map((u) => ({
-          id: u._id,
-          name: u.username,
-          email: u.email,
-          preview: "Tap to chat",
-          time: "",
-          unread: 0,
-          online: false,
-        })));
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch(`${API_SEARCH_USERS}?query=`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const otherUsers = data.filter((u) => u._id !== user?.id);
+          setContacts(otherUsers.map((u) => ({
+            id: u._id,
+            name: u.username,
+            email: u.email,
+            preview: "Tap to chat",
+            time: "",
+            unread: 0,
+            online: false,
+          })));
+        }
+      } catch (err) {
+        console.error("Failed to fetch users:", err);
       }
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
-    }
-  };
-  
-  fetchUsers();
-}, [token, user?.id]);
+    };
+    fetchUsers();
+  }, [token, user?.id]);
 
-  // 3. Track online/offline status
+  // 3. Restore active chat after page refresh
+  useEffect(() => {
+    const savedChatId = localStorage.getItem("activeChatId");
+    const savedContact = localStorage.getItem("activeContact");
+    if (!savedChatId || !savedContact) return;
+
+    const authToken = localStorage.getItem("token");
+    setActiveChatId(savedChatId);
+    activeChatIdRef.current = savedChatId;
+    setSelectedContact(JSON.parse(savedContact));
+
+    fetch(API_GET_MESSAGES(savedChatId), {
+      headers: { Authorization: `Bearer ${authToken}` },
+    })
+      .then((r) => r.json())
+      .then((history) => {
+        if (Array.isArray(history)) setMessages(history);
+      });
+  }, []);
+
+  // 4. Rejoin chat room after socket + activeChatId are both ready
+  useEffect(() => {
+    if (!socket || !activeChatId) return;
+    socket.emit("join_chat", activeChatId);
+    console.log("🔁 Rejoined chat room:", activeChatId);
+  }, [socket, activeChatId]);
+
+  // 5. Track online/offline
   useEffect(() => {
     if (!socket) return;
     socket.on("user_online", ({ userId }) => {
@@ -101,26 +113,41 @@ useEffect(() => {
     };
   }, [socket]);
 
-  // 4. Receive incoming messages
+  // 6. Receive messages — single handler using ref
   useEffect(() => {
     if (!socket) return;
-    socket.on("receive_message", (msg) => {
-      if (msg.chatId === activeChatId) {
-        setMessages((prev) => [...prev, msg]);
-      }
+
+    const handleMessage = (msg) => {
+      console.log("📩 Received message:", msg);
+
       // Update sidebar preview
       setContacts((prev) =>
         prev.map((c) =>
           c.id === (msg.sender?._id || msg.senderId)
-            ? { ...c, preview: msg.content, time: "now" }
+            ? {
+                ...c,
+                preview: msg.content,
+                time: "now",
+                unread:
+                  activeChatIdRef.current === msg.chatId
+                    ? 0
+                    : (c.unread || 0) + 1,
+              }
             : c
         )
       );
-    });
-    return () => socket.off("receive_message");
-  }, [socket, activeChatId]);
 
-  // 5. Select contact → open/create chat → load history
+      // Add to messages if chat is open
+      if (activeChatIdRef.current === msg.chatId) {
+        setMessages((prev) => [...prev, msg]);
+      }
+    };
+
+    socket.on("receive_message", handleMessage);
+    return () => socket.off("receive_message", handleMessage);
+  }, [socket]); // ← only depends on socket, uses ref for activeChatId
+
+  // 7. Select contact
   const handleSelectContact = async (contactId) => {
     const contact = contacts.find((c) => c.id === contactId);
     if (!contact) return;
@@ -128,9 +155,7 @@ useEffect(() => {
     setMessages([]);
 
     try {
-      // Get or create the chat between the two users
-      // FIXED: Added missing colon after 5000
-     const chatRes = await fetch(API_CREATE_CHAT, {
+      const chatRes = await fetch(API_CREATE_CHAT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -140,13 +165,13 @@ useEffect(() => {
       });
       const chat = await chatRes.json();
       const chatId = chat._id;
+
       setActiveChatId(chatId);
+      activeChatIdRef.current = chatId;
+      localStorage.setItem("activeChatId", chatId);
+      localStorage.setItem("activeContact", JSON.stringify(contact));
 
-      // Join socket room so both users receive messages
       socket?.emit("join_chat", chatId);
-
-      // Load message history from DB
-      // FIXED: Added missing colon after 5000
 
       const msgRes = await fetch(API_GET_MESSAGES(chatId), {
         headers: { Authorization: `Bearer ${token}` },
@@ -157,11 +182,11 @@ useEffect(() => {
       console.error("Failed to open chat:", err);
     }
   };
-  // 6. Send a message
+
+  // 8. Send message
   const handleSendMessage = async (content) => {
     if (!content.trim() || !activeChatId) return;
 
-    // Optimistic UI — show immediately
     const tempMsg = {
       _id: `temp_${Date.now()}`,
       chatId: activeChatId,
@@ -172,8 +197,6 @@ useEffect(() => {
     setMessages((prev) => [...prev, tempMsg]);
 
     try {
-      // Save to MongoDB
-      // FIXED: Added missing colon after 5000
       const res = await fetch(API_SEND_MESSAGE, {
         method: "POST",
         headers: {
@@ -184,15 +207,12 @@ useEffect(() => {
       });
       const saved = await res.json();
 
-      // Replace temp message with real saved one
       setMessages((prev) =>
         prev.map((m) => (m._id === tempMsg._id ? saved : m))
       );
 
-      // Emit to other user via socket
       socket?.emit("send_message", { ...saved, chatId: activeChatId });
 
-      // Update sidebar preview
       setContacts((prev) =>
         prev.map((c) =>
           c.id === selectedContact?.id
@@ -205,8 +225,10 @@ useEffect(() => {
     }
   };
 
-  // 7. Logout
+  // 9. Logout
   const handleLogout = () => {
+    localStorage.removeItem("activeChatId");
+    localStorage.removeItem("activeContact");
     disconnectSocket();
     dispatch(logoutUser());
     dispatch(otpLogout());
@@ -218,7 +240,7 @@ useEffect(() => {
         href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap"
         rel="stylesheet"
       />
-      <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+      <Box sx={{ display: "flex", height: "100vh", overflow: "hidden", width: "100%" }}> 
         <Sidebar
           username={username}
           contacts={contacts}
@@ -239,3 +261,5 @@ useEffect(() => {
 };
 
 export default ChatApp;
+
+
