@@ -1,7 +1,7 @@
 import './App.css';
 import { Box } from '@mui/material';
 import Login from './components/Login';
-import ChatApp from './components/Chatapp';  // ✅ Changed from 'ChatApp' to 'Chatapp'
+import ChatApp from './components/ChatApp';
 import { useSelector, useDispatch } from 'react-redux';
 import { useEffect } from 'react';
 import { loginUser } from './Redux/slices/authSlice';
