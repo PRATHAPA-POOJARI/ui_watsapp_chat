@@ -104,6 +104,8 @@ const ChatWindow = ({ username, selectedContact, messages = [], onSendMessage })
               <Box
                 sx={{
                   maxWidth: 320, p: "10px 14px", borderRadius: "14px",
+                  wordBreak: "break-word",
+                  overflowWrap: "break-word",
                   boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
                   background: isSelf ? "#C7F0D3" : "#FFFFFF",
                   borderBottomRightRadius: isSelf ? "3px" : "14px",
@@ -172,3 +174,4 @@ const ChatWindow = ({ username, selectedContact, messages = [], onSendMessage })
 };
 
 export default ChatWindow;
+
