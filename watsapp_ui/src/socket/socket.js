@@ -11,7 +11,9 @@ export const initSocket = (token) => {
     auth: { token },
     transports: ["websocket"],
   });
-
+socket.on("connect", () => {
+    console.log("✅ Socket connected:", socket.id);
+  });
   socket.on("connect", () => {
     console.log("✅ Socket connected:", socket.id);
   });
