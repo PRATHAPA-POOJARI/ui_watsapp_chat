@@ -184,46 +184,35 @@ const ChatApp = ({ username }) => {
   };
 
   // 8. Send message
-  const handleSendMessage = async (content) => {
-    if (!content.trim() || !activeChatId) return;
+// Find handleSendMessage and update the fetch body:
+const handleSendMessage = async (msgData) => {
+  const { type, content, mediaUrl, mediaPublicId, mediaName } = msgData;
+  if (!activeChatId) return;
 
-    const tempMsg = {
-      _id: `temp_${Date.now()}`,
-      chatId: activeChatId,
-      content,
-      sender: { _id: user?.id, username: user?.username },
-      createdAt: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, tempMsg]);
-
-    try {
-      const res = await fetch(API_SEND_MESSAGE, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ chatId: activeChatId, content }),
-      });
-      const saved = await res.json();
-
-      setMessages((prev) =>
-        prev.map((m) => (m._id === tempMsg._id ? saved : m))
-      );
-
-      socket?.emit("send_message", { ...saved, chatId: activeChatId });
-
-      setContacts((prev) =>
-        prev.map((c) =>
-          c.id === selectedContact?.id
-            ? { ...c, preview: content, time: "now" }
-            : c
-        )
-      );
-    } catch (err) {
-      console.error("Failed to send:", err);
-    }
+  const tempMsg = {
+    _id: `temp_${Date.now()}`,
+    chatId: activeChatId,
+    content,
+    type,
+    mediaUrl,
+    mediaName,
+    sender: { _id: user?.id, username: user?.username },
+    createdAt: new Date().toISOString(),
   };
+  setMessages((prev) => [...prev, tempMsg]);
+
+  const res = await fetch(API_SEND_MESSAGE, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ chatId: activeChatId, content, type, mediaUrl, mediaPublicId, mediaName }),
+  });
+  const saved = await res.json();
+  setMessages((prev) => prev.map((m) => (m._id === tempMsg._id ? saved : m)));
+  socket?.emit("send_message", { ...saved, chatId: activeChatId });
+};
 
   // 9. Logout
   const handleLogout = () => {
@@ -261,5 +250,4 @@ const ChatApp = ({ username }) => {
 };
 
 export default ChatApp;
-
 
